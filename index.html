@@ -571,8 +571,8 @@
         
         // 获取延迟状态
         function getPingStatus(ping) {
-            if (ping < 100) return { text: "优秀", class: "ping-good" };
-            if (ping < 300) return { text: "一般", class: "ping-fair" };
+            if (ping < 300) return { text: "优秀", class: "ping-good" };
+            if (ping < 1000) return { text: "一般", class: "ping-fair" };
             return { text: "较差", class: "ping-poor" };
         }
         
