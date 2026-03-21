@@ -459,6 +459,14 @@
                 ping: 0,
                 port: 443
             },
+            { 
+                name: "cloudreve-ipv6", 
+                url: "https://ip.webwd.de5.net", 
+                type: "web",
+                status: "checking", 
+                ping: 0,
+                port: 443
+            },
             
             // Minecraft IPv4 服务器
             { 
@@ -643,17 +651,17 @@
                 {
                     name: "MCStatus API",
                     url: `https://api.mcstatus.io/v2/status/java/${server.url}:${server.port}`,
-                    timeout: 3000
+                    timeout: 8000
                 },
                 {
                     name: "MCSrvStat API",
                     url: `https://api.mcsrvstat.us/2/${server.url}:${server.port}`,
-                    timeout: 3000
+                    timeout: 8000
                 },
                 {
                     name: "MineTools API",
                     url: `https://api.minetools.eu/ping/${server.url}/${server.port}`,
-                    timeout: 3000
+                    timeout: 8000
                 }
             ];
             
