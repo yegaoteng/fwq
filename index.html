@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器状态监控面板</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #f0f8ff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #a0d2ff;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        
+        .server-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .badge-web {
+            background-color: rgba(0, 180, 219, 0.3);
+            border: 1px solid #00b4db;
+        }
+        
+        .badge-mc-ipv4 {
+            background-color: rgba(76, 217, 100, 0.3);
+            border: 1px solid #4cd964;
+        }
+        
+        .badge-mc-ipv6 {
+            background-color: rgba(255, 149, 0, 0.3);
+            border: 1px solid #ff9500;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(16, 36, 54, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(0, 131, 176, 0.2);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 131, 176, 0.2);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 180, 219, 0.3);
+        }
+        
+        .card-header i {
+            font-size: 1.8rem;
+            margin-right: 15px;
+            color: #00b4db;
+        }
+        
+        .card-header h2 {
+            font-size: 1.5rem;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-label {
+            color: #a0d2ff;
+        }
+        
+        .status-value {
+            font-weight: 600;
+        }
+        
+        .ping-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        
+        .ping-good {
+            color: #4cd964;
+        }
+        
+        .ping-fair {
+            color: #ffcc00;
+        }
+        
+        .ping-poor {
+            color: #ff3b30;
+        }
+        
+        .server-list {
+            list-style: none;
+        }
+        
+        .server-list li {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .server-info {
+            flex-grow: 1;
+        }
+        
+        .server-type {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        .server-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-online {
+            background-color: #4cd964;
+            box-shadow: 0 0 8px #4cd964;
+        }
+        
+        .status-offline {
+            background-color: #ff3b30;
+            box-shadow: 0 0 8px #ff3b30;
+        }
+        
+        .status-checking {
+            background-color: #ffcc00;
+            box-shadow: 0 0 8px #ffcc00;
+        }
+        
+        .mc-info {
+            font-size: 0.85rem;
+            color: #a0d2ff;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 180, 219, 0.4);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .last-update {
+            margin-top: 20px;
+            text-align: center;
+            color: #a0d2ff;
+            font-size: 0.9rem;
+        }
+        
+        .response-time {
+            font-size: 2.5rem;
+            text-align: center;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+        
+        .ping-chart {
+            height: 150px;
+            margin-top: 20px;
+            position: relative;
+        }
+        
+        .chart-line {
+            fill: none;
+            stroke: #00b4db;
+            stroke-width: 3;
+        }
+        
+        .chart-area {
+            fill: rgba(0, 180, 219, 0.1);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #88a4bc;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #00b4db;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .server-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00b4db;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #a0d2ff;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .server-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-server"></i> 服务器监控面板</h1>
+            <p class="subtitle"></p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-heartbeat"></i>
+                    <h2>服务器状态概览</h2>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">总服务器状态</span>
+                    <span class="status-value" id="server-status">检测中...</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">HTTP 响应码</span>
+                    <span class="status-value" id="http-status">-</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">最后检测时间</span>
+                    <span class="status-value" id="last-check">-</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">Minecraft 端口状态</span>
+                    <span class="status-value" id="mc-port-status">-</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">服务器时间</span>
+                    <span class="status-value" id="server-time">-</span>
+                </div>
+                
+                <div class="server-stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="web-count">-</div>
+                        <div class="stat-label">网页服务器</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="mc-ipv4-count">-</div>
+                        <div class="stat-label">MC IPv4</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="mc-ipv6-count">-</div>
+                        <div class="stat-label">MC IPv6</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <h2>延迟检测</h2>
+                </div>
+                
+                <div class="response-time">
+                    <span id="ping-value">-</span>
+                    <span style="font-size: 1rem;">ms</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">延迟状态</span>
+                    <span class="status-value" id="ping-status">-</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">平均延迟</span>
+                    <span class="status-value" id="avg-ping">- ms</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">最高延迟</span>
+                    <span class="status-value" id="max-ping">- ms</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-label">最低延迟</span>
+                    <span class="status-value" id="min-ping">- ms</span>
+                </div>
+                
+                <div class="ping-chart">
+                    <svg id="ping-chart" width="100%" height="100%"></svg>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-network-wired"></i>
+                    <h2>服务器列表</h2>
+                </div>
+                
+                <ul class="server-list" id="server-list">
+                    <!-- 服务器列表将通过JavaScript动态生成 -->
+                </ul>
+                
+                <div class="controls">
+                    <button id="check-all-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>立即检测所有服务器</span>
+                    </button>
+                </div>
+                
+                <div class="last-update">
+                    <p>最后更新: <span id="last-update">-</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>多功能服务器监控面板 &copy; 2026</p>
+        </footer>
+    </div>
+
+    <script>
+        // 服务器列表 - 支持网页服务器和Minecraft服务器
+        let servers = [
+            // 网页服务器
+            { 
+                name: "当前网页", 
+                url: "https://fwq.webwd.de5.net", 
+                type: "web",
+                status: "checking", 
+                ping: 0,
+                port: 443
+            },
+            
+            
+            // Minecraft IPv4 服务器
+            { 
+                name: "ppksp雾中人服务器", 
+                url: "143.20.156.143", 
+                type: "mc-ipv4",
+                status: "checking", 
+                ping: 0,
+                port: 38719
+            },
+         
+            
+            // Minecraft IPv6 服务器 (示例)
+            { 
+                name: "ppksp雾中人服务器", 
+                url: "ip.webwd.de5.net", 
+                type: "mc-ipv6",
+                status: "checking", 
+                ping: 0,
+                port: 25565
+            },
+            
+        ];
+        
+        // 延迟历史记录
+        let pingHistory = [];
+        const maxHistory = 20;
+        
+        // 自动刷新时间（10秒）
+        const AUTO_REFRESH_INTERVAL = 20000;
+        
+        // 初始化图表
+        const svg = document.getElementById('ping-chart');
+        const svgNS = svg.namespaceURI;
+        
+        // 创建折线路径
+        const linePath = document.createElementNS(svgNS, 'path');
+        linePath.setAttribute('class', 'chart-line');
+        svg.appendChild(linePath);
+        
+        // 创建区域路径
+        const areaPath = document.createElementNS(svgNS, 'path');
+        areaPath.setAttribute('class', 'chart-area');
+        svg.appendChild(areaPath);
+        
+        // 获取服务器类型徽章
+        function getServerTypeBadge(type) {
+            switch(type) {
+                case 'web': return 'badge-web';
+                case 'mc-ipv4': return 'badge-mc-ipv4';
+                case 'mc-ipv6': return 'badge-mc-ipv6';
+                default: return '';
+            }
+        }
+        
+        // 获取服务器类型文本
+        function getServerTypeText(type) {
+            switch(type) {
+                case 'web': return '网页服务器';
+                case 'mc-ipv4': return 'Minecraft IPv4';
+                case 'mc-ipv6': return 'Minecraft IPv6';
+                default: return '未知';
+            }
+        }
+        
+        // 更新图表
+        function updateChart() {
+            if (pingHistory.length < 2) return;
+            
+            const width = svg.clientWidth;
+            const height = svg.clientHeight;
+            
+            // 计算最大延迟值
+            const maxPing = Math.max(...pingHistory.map(p => p.ping));
+            const minPing = Math.min(...pingHistory.map(p => p.ping));
+            const range = Math.max(maxPing - minPing, 50);
+            
+            // 生成折线路径
+            let linePathData = 'M';
+            let areaPathData = 'M';
+            
+            pingHistory.forEach((point, index) => {
+                const x = (index / (pingHistory.length - 1)) * width;
+                const y = height - ((point.ping - minPing) / range) * height * 0.8;
+                
+                if (index === 0) {
+                    linePathData += `${x},${y}`;
+                    areaPathData += `${x},${y}`;
+                } else {
+                    linePathData += ` L${x},${y}`;
+                    areaPathData += ` L${x},${y}`;
+                }
+            });
+            
+            // 闭合区域路径
+            areaPathData += ` L${width},${height} L0,${height} Z`;
+            
+            linePath.setAttribute('d', linePathData);
+            areaPath.setAttribute('d', areaPathData);
+        }
+        
+        // 获取当前时间
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('zh-CN');
+        }
+        
+        // 格式化时间
+        function formatTime(date) {
+            return date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        // 获取延迟状态
+        function getPingStatus(ping) {
+            if (ping < 100) return { text: "优秀", class: "ping-good" };
+            if (ping < 300) return { text: "一般", class: "ping-fair" };
+            return { text: "较差", class: "ping-poor" };
+        }
+        
+        // 检测网页服务器延迟
+        async function checkWebServer(server) {
+            const startTime = performance.now();
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                // 尝试多种方法检测服务器
+                let response;
+                try {
+                    // 首先尝试HEAD请求
+                    response = await fetch(server.url, {
+                        method: 'HEAD',
+                        mode: 'no-cors',
+                        signal: controller.signal
+                    });
+                } catch (e) {
+                    // 如果HEAD失败，尝试GET请求
+                    response = await fetch(server.url, {
+                        method: 'GET',
+                        mode: 'no-cors',
+                        signal: controller.signal
+                    });
+                }
+                
+                clearTimeout(timeoutId);
+                const endTime = performance.now();
+                const ping = Math.round(endTime - startTime);
+                
+                server.status = "online";
+                server.ping = ping;
+                server.lastCheck = new Date();
+                
+                return { success: true, ping, server };
+            } catch (error) {
+                server.status = "offline";
+                server.ping = 0;
+                server.lastCheck = new Date();
+                
+                return { success: false, ping: 0, server };
+            }
+        }
+        
+        // 检测Minecraft服务器（TCP端口检测）
+        async function checkMinecraftServer(server) {
+            const startTime = performance.now();
+            
+            return new Promise((resolve) => {
+                // 创建WebSocket或Image对象来检测端口
+                // 注意：由于浏览器安全限制，我们不能直接进行TCP连接
+                // 这里使用一个变通的方法来检测Minecraft服务器
+                
+                const testUrl = server.type === 'mc-ipv6' ? 
+                    `https://api.mcsrvstat.us/2/${server.url}:${server.port}` :
+                    `https://api.mcsrvstat.us/2/${server.url}:${server.port}`;
+                
+                fetch(testUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('API请求失败');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const endTime = performance.now();
+                        const ping = Math.round(endTime - startTime);
+                        
+                        if (data.online) {
+                            server.status = "online";
+                            server.ping = ping;
+                            server.playerCount = data.players ? data.players.online : 0;
+                            server.maxPlayers = data.players ? data.players.max : 0;
+                            server.version = data.version || "未知";
+                        } else {
+                            server.status = "offline";
+                            server.ping = 0;
+                        }
+                        
+                        server.lastCheck = new Date();
+                        resolve({ 
+                            success: data.online, 
+                            ping, 
+                            server,
+                            mcData: data
+                        });
+                    })
+                    .catch(error => {
+                        server.status = "offline";
+                        server.ping = 0;
+                        server.lastCheck = new Date();
+                        
+                        resolve({ 
+                            success: false, 
+                            ping: 0, 
+                            server 
+                        });
+                    });
+            });
+        }
+        
+        // 检测服务器延迟
+        async function checkServer(server) {
+            if (server.type === 'web') {
+                return await checkWebServer(server);
+            } else {
+                return await checkMinecraftServer(server);
+            }
+        }
+        
+        // 更新服务器列表显示
+        function updateServerList() {
+            const serverListElement = document.getElementById('server-list');
+            serverListElement.innerHTML = '';
+            
+            servers.forEach(server => {
+                const li = document.createElement('li');
+                
+                const statusClass = server.status === 'online' ? 'status-online' : 
+                                  server.status === 'offline' ? 'status-offline' : 'status-checking';
+                const statusText = server.status === 'online' ? '在线' : 
+                                 server.status === 'offline' ? '离线' : '检测中...';
+                
+                const badgeClass = getServerTypeBadge(server.type);
+                const typeText = getServerTypeText(server.type);
+                
+                let mcInfo = '';
+                if ((server.type === 'mc-ipv4' || server.type === 'mc-ipv6') && server.status === 'online') {
+                    mcInfo = `
+                        <div class="mc-info">
+                            玩家: ${server.playerCount || 0}/${server.maxPlayers || 0} | 
+                            版本: ${server.version || '未知'} | 
+                            端口: ${server.port}
+                        </div>
+                    `;
+                }
+                
+                li.innerHTML = `
+                    <div class="server-info">
+                        <div>
+                            <span class="server-status ${statusClass}"></span>
+                            <strong>${server.name}</strong>
+                            <span class="server-type-badge ${badgeClass}">${typeText}</span>
+                        </div>
+                        <div class="server-type">${server.url}:${server.port}</div>
+                        ${mcInfo}
+                    </div>
+                    <div style="text-align: right;">
+                        <div>${statusText}</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; margin-top: 5px;">
+                            ${server.ping > 0 ? server.ping + ' ms' : (server.status === 'checking' ? '<div class="loading" style="width: 16px; height: 16px; display: inline-block;"></div>' : '离线')}
+                        </div>
+                    </div>
+                `;
+                
+                serverListElement.appendChild(li);
+            });
+        }
+        
+        // 更新概览信息
+        function updateOverview() {
+            const onlineServers = servers.filter(s => s.status === 'online').length;
+            const totalServers = servers.length;
+            const checkingServers = servers.filter(s => s.status === 'checking').length;
+            
+            // 统计各类服务器数量
+            const webServers = servers.filter(s => s.type === 'web');
+            const mcIPv4Servers = servers.filter(s => s.type === 'mc-ipv4');
+            const mcIPv6Servers = servers.filter(s => s.type === 'mc-ipv6');
+            
+            const onlineWebServers = webServers.filter(s => s.status === 'online').length;
+            const onlineMCIPv4Servers = mcIPv4Servers.filter(s => s.status === 'online').length;
+            const onlineMCIPv6Servers = mcIPv6Servers.filter(s => s.status === 'online').length;
+            
+            // 更新统计数字
+            document.getElementById('web-count').textContent = `${onlineWebServers}/${webServers.length}`;
+            document.getElementById('mc-ipv4-count').textContent = `${onlineMCIPv4Servers}/${mcIPv4Servers.length}`;
+            document.getElementById('mc-ipv6-count').textContent = `${onlineMCIPv6Servers}/${mcIPv6Servers.length}`;
+            
+            // 更新服务器状态
+            let statusText = '';
+            if (checkingServers > 0) {
+                statusText = `<span style="color: #ffcc00">检测中 (${checkingServers}/${totalServers})</span>`;
+            } else {
+                statusText = `<span style="color: ${onlineServers === totalServers ? '#4cd964' : 
+                              onlineServers > 0 ? '#ffcc00' : '#ff3b30'}">
+                    ${onlineServers}/${totalServers} 在线
+                </span>`;
+            }
+            
+            document.getElementById('server-status').innerHTML = statusText;
+            
+            // 更新Minecraft端口状态
+            const mcOnline = onlineMCIPv4Servers + onlineMCIPv6Servers;
+            const mcTotal = mcIPv4Servers.length + mcIPv6Servers.length;
+            document.getElementById('mc-port-status').innerHTML = `
+                <span style="color: ${mcOnline === mcTotal ? '#4cd964' : 
+                              mcOnline > 0 ? '#ffcc00' : '#ff3b30'}">
+                    ${mcOnline}/${mcTotal} 在线
+                </span>
+            `;
+            
+            // 更新服务器时间
+            document.getElementById('server-time').textContent = getCurrentTime();
+            
+            // 更新最后检测时间
+            const now = new Date();
+            document.getElementById('last-check').textContent = formatTime(now);
+            
+            // 更新最后更新时间
+            document.getElementById('last-update').textContent = formatTime(now);
+        }
+        
+        // 更新延迟信息
+        function updatePingInfo() {
+            const validPings = pingHistory.filter(p => p.ping > 0).map(p => p.ping);
+            
+            if (validPings.length > 0) {
+                const currentPing = validPings[validPings.length - 1];
+                const avgPing = Math.round(validPings.reduce((a, b) => a + b, 0) / validPings.length);
+                const maxPing = Math.max(...validPings);
+                const minPing = Math.min(...validPings);
+                
+                document.getElementById('ping-value').textContent = currentPing;
+                document.getElementById('avg-ping').textContent = `${avgPing} ms`;
+                document.getElementById('max-ping').textContent = `${maxPing} ms`;
+                document.getElementById('min-ping').textContent = `${minPing} ms`;
+                
+                const pingStatus = getPingStatus(currentPing);
+                document.getElementById('ping-status').innerHTML = 
+                    `<span class="${pingStatus.class}">${pingStatus.text}</span>`;
+                
+                document.getElementById('ping-value').className = `ping-value ${pingStatus.class}`;
+            }
+            
+            // 更新图表
+            updateChart();
+        }
+        
+        // 检测所有服务器
+        async function checkAllServers() {
+            const checkBtn = document.getElementById('check-all-btn');
+            const originalText = checkBtn.innerHTML;
+            
+            checkBtn.innerHTML = '<div class="loading"></div> 检测中...';
+            checkBtn.disabled = true;
+            
+            document.getElementById('http-status').textContent = '检测中...';
+            
+            // 先将所有服务器状态设为检测中
+            servers.forEach(server => {
+                server.status = "checking";
+            });
+            updateServerList();
+            updateOverview();
+            
+            let firstWebServerPing = 0;
+            let firstWebServerSuccess = false;
+            let webServerChecked = false;
+            
+            for (let i = 0; i < servers.length; i++) {
+                const server = servers[i];
+                const result = await checkServer(server);
+                
+                // 如果是第一个网页服务器，使用其状态作为概览
+                if (server.type === 'web' && !webServerChecked) {
+                    firstWebServerSuccess = result.success;
+                    firstWebServerPing = result.ping;
+                    webServerChecked = true;
+                    
+                    document.getElementById('http-status').textContent = result.success ? '200' : '超时';
+                    
+                    if (result.success) {
+                        // 添加到历史记录
+                        pingHistory.push({
+                            time: new Date(),
+                            ping: result.ping
+                        });
+                        
+                        // 保持历史记录不超过最大数量
+                        if (pingHistory.length > maxHistory) {
+                            pingHistory.shift();
+                        }
+                    }
+                }
+                
+                // 短暂延迟，避免请求过于密集
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 实时更新当前服务器的状态
+                updateServerList();
+                updateOverview();
+            }
+            
+            // 更新显示
+            updateOverview();
+            updatePingInfo();
+            
+            checkBtn.innerHTML = originalText;
+            checkBtn.disabled = false;
+        }
+        
+        // 初始化
+        function init() {
+            // 绑定按钮事件
+            document.getElementById('check-all-btn').addEventListener('click', checkAllServers);
+            
+            // 初始显示
+            updateServerList();
+            updateOverview();
+            
+            // 初始检测
+            checkAllServers();
+            
+            // 定期更新
+            setInterval(updateOverview, 1000); // 每秒更新时间
+            
+            // 每10秒自动检测所有服务器
+            setInterval(checkAllServers, AUTO_REFRESH_INTERVAL);
+            
+            // 监听窗口大小变化，重新绘制图表
+            window.addEventListener('resize', updateChart);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
