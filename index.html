@@ -443,7 +443,7 @@
         </div>
         
         <footer>
-            <p>多功能服务器监控面板 &copy; 2026 | 采用改进的Minecraft服务器检测算法</p>
+            <p>服务器监控面板 &copy; 2026</p>
         </footer>
     </div>
 
@@ -723,36 +723,6 @@
                 }
             }
             
-            // 方法2: 如果所有API都失败，尝试简单的端口检测
-            if (DEBUG_MODE) console.log("所有API检测失败，尝试端口检测...");
-            
-            try {
-                const portCheckResult = await checkPortWithImage(server);
-                if (portCheckResult.success) {
-                    const endTime = performance.now();
-                    const ping = Math.round(endTime - startTime);
-                    
-                    server.status = "online";
-                    server.ping = ping;
-                    server.playerCount = 0; // 端口检测无法获取玩家信息
-                    server.maxPlayers = 0;
-                    server.version = "未知";
-                    server.lastCheck = new Date();
-                    server.detectedBy = "端口检测";
-                    
-                    if (DEBUG_MODE) console.log(`✅ 端口检测成功，服务器在线，延迟: ${ping}ms`);
-                    
-                    return { 
-                        success: true, 
-                        ping, 
-                        server,
-                        apiUsed: "端口检测"
-                    };
-                }
-            } catch (error) {
-                if (DEBUG_MODE) console.log("❌ 端口检测也失败:", error.message);
-            }
-            
             // 所有方法都失败
             server.status = "offline";
             server.ping = 0;
@@ -766,46 +736,6 @@
                 server,
                 apiUsed: "无"
             };
-        }
-        
-        // 通过Image对象检测端口（简单TCP端口检测）
-        function checkPortWithImage(server) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                let resolved = false;
-                
-                img.onload = () => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve({ success: true });
-                    }
-                };
-                
-                img.onerror = () => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve({ success: true }); // 即使出错，也认为端口是开放的
-                    }
-                };
-                
-                // 设置超时
-                setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve({ success: false });
-                    }
-                }, 3000);
-                
-                // 尝试加载一个不存在的资源来检测端口
-                // 注意：这种方法可能不适用于所有服务器，但可以检测端口是否开放
-                const timestamp = Date.now();
-                const protocol = server.port === 443 ? 'https' : 'http';
-                const testUrl = `${protocol}://${server.url}:${server.port}/favicon.ico?t=${timestamp}`;
-                
-                if (DEBUG_MODE) console.log(`🔄 尝试端口检测: ${testUrl}`);
-                
-                img.src = testUrl;
-            });
         }
         
         // 检测服务器延迟
